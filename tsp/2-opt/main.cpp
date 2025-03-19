@@ -1,5 +1,7 @@
 #include <iostream>
 #include <cmath>
+#include <vector>
+#include <algorithm>
 
 struct Coordinate{
   float x;
@@ -16,48 +18,41 @@ int main(){
     int number_of_coordinates;
     std::cin >> number_of_coordinates;
 
-    Coordinate coordinates[number_of_coordinates];  //  Coordinates storage
+    std::vector<Coordinate> coordinates;  //  Coordinates storage
     for(int i=0;i<number_of_coordinates;i++){   // Reads coordinates
-        std::cin >> coordinates[i].x >> coordinates[i].y;
+        float x_axis, y_axis;
+        std::cin >> x_axis >> y_axis;
+        Coordinate coordinate;
+        coordinate.x = x_axis;
+        coordinate.y = y_axis;
+        coordinates.push_back(coordinate);
     }
 
-    // Calculate total distance of the current route
-    float current_route_total_distance = 0;
-    for(int i=0;i<number_of_coordinates-1;i++){
-        current_route_total_distance += distanceBetweenCoordinates(coordinates[i],coordinates[i+1]);
-    }
+    // Calculate the route before optimization in order to compare how better it became
+    float route_total_distance = 0;
+    for(int i=0;i<number_of_coordinates-1;i++)
+        route_total_distance += distanceBetweenCoordinates(coordinates[i], coordinates[i+1]);
+    route_total_distance += distanceBetweenCoordinates(coordinates[number_of_coordinates - 1], coordinates[0]);
 
-    for(int i=0;i<number_of_coordinates-2;i++){
-        for(int j=i+1;j<number_of_coordinates;j++){
-            if(j == i+1 || j == number_of_coordinates-1)    //  Ignores the "neighbour" of the coordinate analyzed and when j cannot inverse the j+1 element
-                continue;
+    // Where optimization happens
+    bool improved = true;
+    while(improved){
+      improved = false;
+      for(int i=0;i<number_of_coordinates-3;i++){
+          for(int j=i+2;j<number_of_coordinates-1;j++){   // Goes until number_of_coordinates-1 because element j+1 will need to be acessed
+              float current_path_distance =
+              distanceBetweenCoordinates(coordinates[i], coordinates[i+1]) + distanceBetweenCoordinates(coordinates[j], coordinates[j+1]);
 
-            // Index of coordinates that will be traded
-            int inversed_coordinate_index_1 = i+1;
-            int inversed_coordinate_index_2 = j+1;
+              float new_path_distance =
+              distanceBetweenCoordinates(coordinates[i], coordinates[j]) + distanceBetweenCoordinates(coordinates[j+1], coordinates[i+1]);
 
-            // Change coordinates local
-            Coordinate auxiliary = coordinates[inversed_coordinate_index_1];
-            coordinates[inversed_coordinate_index_1] = coordinates[inversed_coordinate_index_2];
-            coordinates[inversed_coordinate_index_2] = auxiliary;
-
-            float new_route_total_distance = 0;
-            for(int k=0;k<number_of_coordinates;k++)    // Calculate new route
-                new_route_total_distance += distanceBetweenCoordinates(coordinates[k],coordinates[k+1]);
-            
-            if(new_route_total_distance < current_route_total_distance){
-            // Keeps new route, update total distance of current_route to the new_route total distance and re-start the 2-opt with the new_route (by setting i = 0 and break the loop)
-
-                current_route_total_distance = new_route_total_distance;
-                i = 0;
-                break;
-            } else {
-            // Change back the coordinates to the old version and go to next iteration
-
-                coordinates[inversed_coordinate_index_2] = coordinates[inversed_coordinate_index_1];
-                coordinates[inversed_coordinate_index_1] = auxiliary;
-            }
-        }
+              if(new_path_distance < current_path_distance){
+              // Keeps new route and re-start the 2-opt with the new_route (by setting i = 0 and break the loop)
+                  std::reverse(coordinates.begin() + i + 1, coordinates.begin() + j + 1);
+                  improved = true;
+              }
+          }
+      }
     }
 
     // Diplay the coordinates organized in the best calculated route
@@ -65,12 +60,19 @@ int main(){
     for(int i=1;i<number_of_coordinates;i++){
         std::cout << ",\n(" << coordinates[i].x << ", " << coordinates[i].y << ")";
     }
-    std::cout << ",\n(" << coordinates[0].x << ", " << coordinates[0].y << ")";  // Repeats first coordinate to "go back" to it
+    std::cout << ",\n(" << coordinates[0].x << ", " << coordinates[0].y << ")";
 
     std::cout << "\n\n";
 
-    current_route_total_distance += distanceBetweenCoordinates(coordinates[number_of_coordinates-1], coordinates[0]);   // Adds distance to "go back to the beggining"
-    std::cout << current_route_total_distance << std::endl;
+    std::cout << "Distance of old route: " << route_total_distance << std::endl;
+
+    route_total_distance = 0;
+    for(int i=0;i<number_of_coordinates-1;i++)
+        route_total_distance += distanceBetweenCoordinates(coordinates[i], coordinates[i+1]);
+
+    route_total_distance += distanceBetweenCoordinates(coordinates[number_of_coordinates - 1], coordinates[0]);
+
+    std::cout << "Distance of new route: " << route_total_distance << std::endl;
 
     return 0;
 }
